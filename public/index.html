@@ -1,0 +1,70 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AKS Digital Products Market</title>
+<style>
+:root{--bg:#06201f;--card:#0c3533;--line:#16504c;--ac:#2dd4bf;--tx:#e6fffb;--mu:#8fc9c2;--bad:#f87171;--ok:#4ade80}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0}nav button{background:none;border:0;color:var(--mu);padding:8px 12px;font-size:15px;cursor:pointer;border-radius:8px}
+nav button.on{background:var(--card);color:var(--ac)}main{max-width:1100px;margin:auto;padding:20px}
+input,select,button.b{font:inherit;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--tx)}
+button.b{background:var(--ac);color:#032;border:0;font-weight:600;cursor:pointer}button.b.alt{background:var(--card);color:var(--tx);border:1px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.bar input{flex:1;min-width:160px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.em{font-size:30px}.mu{color:var(--mu);font-size:13px}.pr{font-size:18px;font-weight:700;color:var(--ac)}
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:14px}.modal.on{display:flex}
+.box{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:20px;width:100%;max-width:420px;display:grid;gap:10px;max-height:92vh;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}.kpi div{background:var(--card);border-radius:12px;padding:14px}
+.kpi b{display:block;font-size:20px;color:var(--ac)}.hide{display:none}.tag{padding:2px 8px;border-radius:99px;background:var(--line);font-size:12px}
+pre{background:var(--card);padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-all}
+</style></head><body>
+<header><h1>🛒 AKS Digital Products Market</h1><nav><button class="on" data-t="shop">Shop</button><button data-t="track">Track order</button><button data-t="admin">Dashboard</button></nav></header>
+<main>
+<section id="shop"><div class="bar"><input id="q" placeholder="Search products…"><select id="cat"><option value="">All categories</option></select></div><div class="grid" id="grid">Loading…</div></section>
+<section id="track" class="hide"><div class="bar"><input id="tid" placeholder="Order ID (AKS…)"><input id="tct" placeholder="Phone / email used"><button class="b" id="tgo">Check</button></div><div id="tout"></div></section>
+<section id="admin" class="hide"><div id="login" class="bar"><input id="pw" type="password" placeholder="Admin password"><button class="b" id="lgo">Sign in</button></div><div id="dash" class="hide"></div></section>
+</main>
+<div class="modal" id="m"><div class="box" id="mb"></div></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const EM={AI:'🤖',Design:'🎨',Social:'📱',Accounts:'📧',Software:'🔑',Other:'📦'};
+let P=[],CFG={payInfo:[]},TOKEN='';
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+ ['shop','track','admin'].forEach(t=>$('#'+t).classList.toggle('hide',t!==b.dataset.t))});
+const mm=n=>Number(n).toLocaleString()+' MMK';
+async function load(){CFG=await (await fetch('/api/config')).json();
+ const r=await fetch('/api/products');if(!r.ok){$('#grid').textContent='Catalog temporarily unavailable.';return}
+ P=await r.json();[...new Set(P.map(p=>p.category))].forEach(c=>$('#cat').insertAdjacentHTML('beforeend',`<option>${esc(c)}</option>`));draw()}
+function draw(){const q=$('#q').value.toLowerCase(),c=$('#cat').value;
+ $('#grid').innerHTML=P.filter(p=>(!c||p.category===c)&&p.name.toLowerCase().includes(q)).map(p=>`<div class="card"><div class="em">${EM[p.category]}</div><b>${esc(p.name)}</b>
+ <span class="mu">${esc(p.category)} · ${p.stock>0?p.stock+' in stock':'Out of stock'}</span><div class="pr">$${p.usd.toFixed(2)}</div><span class="mu">${mm(p.mmk)}</span>
+ <button class="b" ${p.stock>0?'':'disabled'} onclick="buy('${esc(p.id)}')">Buy now</button></div>`).join('')||'No products found.'}
+$('#q').oninput=draw;$('#cat').onchange=draw;
+function buy(id){const p=P.find(x=>x.id===id);
+ $('#mb').innerHTML=`<h3 style="margin:0">${esc(p.name)}</h3><div class="mu">$${p.usd.toFixed(2)} · ${mm(p.mmk)} each</div>
+ <input id="f_q" type="number" min="1" max="${Math.min(20,p.stock)}" value="1"><input id="f_n" placeholder="Your name"><input id="f_c" placeholder="Phone or email (to track order)">
+ <select id="f_m">${['KPay','WavePay','CBPay','AYA Pay'].map(x=>`<option>${x}</option>`)}</select>
+ <div class="mu">Send payment to:<br>${CFG.payInfo.map(esc).join('<br>')}</div><input id="f_t" placeholder="Payment transaction ID / last 6 digits">
+ <div id="f_e" style="color:var(--bad)"></div><button class="b" id="f_go">Place order</button><button class="b alt" onclick="$('#m').classList.remove('on')">Cancel</button>`;
+ $('#m').classList.add('on');
+ $('#f_go').onclick=async()=>{const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:id,quantity:$('#f_q').value,name:$('#f_n').value,contact:$('#f_c').value,method:$('#f_m').value,txnRef:$('#f_t').value})});
+  const d=await r.json();if(!r.ok){$('#f_e').textContent=d.error;return}
+  $('#mb').innerHTML=`<h3 style="margin:0">✅ Order received</h3><p>Order ID: <b>${esc(d.id)}</b><br>Total: $${d.usd.toFixed(2)} (${mm(d.mmk)})</p><p class="mu">We verify your payment, then your keys appear under “Track order”. Save your Order ID.</p><button class="b" onclick="$('#m').classList.remove('on')">Close</button>`}}
+$('#tgo').onclick=async()=>{const r=await fetch(`/api/track?id=${encodeURIComponent($('#tid').value)}&contact=${encodeURIComponent($('#tct').value)}`),d=await r.json();
+ $('#tout').innerHTML=!r.ok?esc(d.error):`<div class="card"><b>${esc(d.product)} × ${d.quantity}</b><span class="tag">${esc(d.status)}</span>${d.keys.length?`<pre>${d.keys.map(esc).join('\n')}</pre>`:'<span class="mu">Keys are released after payment is confirmed.</span>'}</div>`};
+async function adm(path,opt={}){return fetch(path,{...opt,headers:{'x-admin':TOKEN}})}
+async function dash(){const r=await adm('/api/admin/summary');if(!r.ok){alert('Wrong password');return}const d=await r.json();
+ $('#login').classList.add('hide');$('#dash').classList.remove('hide');const s=d.stats||{orders:{},spending:{}};
+ $('#dash').innerHTML=`<div class="kpi"><div>AIVault wallet<b>$${Number(d.balance).toFixed(2)}</b></div><div>Shop revenue<b>$${d.revenue.toFixed(2)}</b></div><div>Profit<b>$${d.profit.toFixed(2)}</b></div>
+ <div>Orders (30d)<b>${s.orders['30d']??'-'}</b></div><div>Spend (30d)<b>$${s.spending['30d']??'-'}</b></div></div>
+ <div class="bar"><button class="b alt" id="exp">Export CSV</button></div>
+ <table><tr><th>ID</th><th>Customer</th><th>Item</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr>${d.orders.map(o=>`<tr><td>${esc(o.id)}</td><td>${esc(o.name)}<br><span class="mu">${esc(o.contact)}</span></td>
+ <td>${esc(o.product)} ×${o.quantity}</td><td>$${o.price.toFixed(2)}<br><span class="mu">${mm(o.mmk)}</span></td><td>${esc(o.method)}<br><span class="mu">${esc(o.txnRef)}</span></td>
+ <td><span class="tag">${esc(o.status)}</span>${o.error?`<br><span class="mu" style="color:var(--bad)">${esc(o.error)}</span>`:''}</td>
+ <td>${['pending_review','needs_action','queued'].includes(o.status)?`<button class="b" onclick="act('${o.id}','confirm')">Confirm</button> <button class="b alt" onclick="act('${o.id}','reject')">Reject</button>`:''}</td></tr>`).join('')}</table>`;
+ $('#exp').onclick=async()=>{const t=await (await adm('/api/admin/export')).blob(),a=document.createElement('a');a.href=URL.createObjectURL(t);a.download='orders.csv';a.click()}}
+async function act(id,a){await adm(`/api/admin/orders/${id}/${a}`,{method:'POST'});dash()}
+$('#lgo').onclick=()=>{TOKEN=$('#pw').value;dash()};
+load();
+</script></body></html>
